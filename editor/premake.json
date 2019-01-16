@@ -1,0 +1,29 @@
+{
+        "projects" : [
+                {
+                        "name" : "editor",
+                        "kind" : "SharedLib",
+                        "language" : "C++",
+
+                        "files": [
+                          "./**.json",
+                          "./**.hpp",
+                          "./**.h",
+                          "./**.cpp"
+                        ],
+
+                        "include_dirs" : [
+                                "./src",
+                                "../runtime/src/"
+                        ],
+
+                        "dependencies" : [
+                                "karbon_drive"
+                        ],
+
+                        "links-windows" : [
+                                "opengl32.lib"
+                        ]
+                }
+        ]
+}

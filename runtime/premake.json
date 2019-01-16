@@ -1,0 +1,29 @@
+{
+        "projects" : [
+                {
+                        "name" : "runtime",
+                        "kind" : "SharedLib",
+                        "language" : "C++",
+
+                        "files" : [
+                                "./**.json",
+                                "./**.h",
+                                "./**.c",
+                                "./**.hpp",
+                                "./**.cpp"
+                        ],
+
+                        "include_dirs" : [
+                                "./src"
+                        ],
+
+                        "dependencies" : [
+                                "karbon_drive"
+                        ],
+
+                        "links-windows" : [
+                                "opengl32.lib"
+                        ]
+                }
+        ]
+}
