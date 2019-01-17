@@ -5,10 +5,11 @@
 #include <assert.h>
 #include <stdio.h>
 #include <math.h>
-#include <Imgui/imgui.h>
+
 
 #define CHUNK_IMPL
 #include <chunk/chunk.h>
+#include <chunk/types.h>
 
 
 #define GL_ERR(msg)                                           \
@@ -27,9 +28,11 @@ do {                                                          \
 /* ----------------------------------------------------------- Application -- */
 
 
-struct rt_ctx {
+struct ed_ctx {
         GLuint vao, vbo, pro;
-} rt_ctx;
+
+        struct ch_transform transforms[3];
+} ed_ctx;
 
 
 void
@@ -39,8 +42,8 @@ setup()
         ok = kd_log(KD_LOG_INFO, "RT Startup");
         assert(ok == KD_RESULT_OK);
 
-        memset(&rt_ctx, 0, sizeof(rt_ctx));
-        
+        memset(&ed_ctx, 0, sizeof(ed_ctx));
+                
         ok = kd_gl_make_current();
         assert(ok == KD_RESULT_OK && "Failed to make current");
 
@@ -76,7 +79,7 @@ setup()
         GLuint vao;
         glGenVertexArrays(1, &vao);
         glBindVertexArray(vao);
-        rt_ctx.vao = vao;
+        ed_ctx.vao = vao;
         
         if(glObjectLabel) {
                 glObjectLabel(GL_VERTEX_ARRAY, vao, -1, "Cube::VAO");
@@ -126,20 +129,13 @@ setup()
                 0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
                 -0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f,
                 -0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f,
-
-                -1.0f, -1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                1.0f, -1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-                1.0f,  1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-                1.0f,  1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-                -1.0f,  1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-                -1.0f, -1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
         };
 
         GLuint vbo;
         glGenBuffers(1, &vbo);
         glBindBuffer(GL_ARRAY_BUFFER, vbo);
         glBufferData(GL_ARRAY_BUFFER, sizeof(verts), verts, GL_STATIC_DRAW);
-        rt_ctx.vbo = vbo;
+        ed_ctx.vbo = vbo;
 
         if(glObjectLabel) {
                 glObjectLabel(GL_BUFFER, vbo, -1, "Cube::VBO::f3f3f2");
@@ -215,7 +211,7 @@ setup()
         glDeleteShader(vs_shd);
         glDeleteShader(fs_shd);
 
-        rt_ctx.pro = pro;
+        ed_ctx.pro = pro;
 
         if(glObjectLabel) {
                 glObjectLabel(GL_PROGRAM, pro, -1, "Cube::Fill");
@@ -226,15 +222,35 @@ setup()
         if(glPopDebugGroup) {
                 glPopDebugGroup();
         }
+
+        /* level edit data test */
+        ed_ctx.transforms[0].x = 0.f;
+        ed_ctx.transforms[0].y = 0.f;
+        ed_ctx.transforms[0].z = 0.f;
+
+        ed_ctx.transforms[1].x = 1.f;
+        ed_ctx.transforms[1].y = 1.f;
+        ed_ctx.transforms[1].z = 0.f;
+
+        ed_ctx.transforms[2].x = -1.f;
+        ed_ctx.transforms[2].y = -1.f;
+        ed_ctx.transforms[2].z = 0.f;
+
+        chunk_export export_tr;
+        export_tr.chunk_idx = 1;
+        export_tr.data = (void*)ed_ctx.transforms;
+        export_tr.bytes = sizeof(ed_ctx.transforms);
+
+        chunk_write_out(&export_tr, 1, CHUNK_VERSION, "foo.dat");
 }
 
 
 void
 shutdown()
 {
-        glDeleteProgram(rt_ctx.pro);
-        glDeleteBuffers(1, &rt_ctx.vbo);
-        glDeleteVertexArrays(1, &rt_ctx.vao);
+        glDeleteProgram(ed_ctx.pro);
+        glDeleteBuffers(1, &ed_ctx.vbo);
+        glDeleteVertexArrays(1, &ed_ctx.vao);
 
         /* chunk test */
         
@@ -262,11 +278,11 @@ render() {
         glEnable(GL_DEPTH_TEST);
         glDisable(GL_STENCIL_TEST);
 
-        glBindVertexArray(rt_ctx.vao);
+        glBindVertexArray(ed_ctx.vao);
         GL_ERR("Setup - VAO")
-        glUseProgram(rt_ctx.pro);
+        glUseProgram(ed_ctx.pro);
         GL_ERR("Setup - use program")
-        glBindBuffer(GL_ARRAY_BUFFER, rt_ctx.vbo);
+        glBindBuffer(GL_ARRAY_BUFFER, ed_ctx.vbo);
         GL_ERR("Setup - vbo")
 
         /* clear */
@@ -275,45 +291,14 @@ render() {
         GL_ERR("Clear")
 
         /* draw cube */
-        GLint color = glGetUniformLocation(rt_ctx.pro, "overrideColor");
+        GLint color = glGetUniformLocation(ed_ctx.pro, "overrideColor");
         glUniform3f(color, 1.0f, 1.0f, 1.0f);
-
-        /* mats */
-        float model[16];
-        kdm_mat4_id(model);
-        GLint model_i = glGetUniformLocation(rt_ctx.pro, "model");
-        glUniformMatrix4fv(model_i, 1, GL_FALSE, model);
-
-        float view[16];
-        
-        float x = sinf(0.1f) * 4.f;
-        float y = cosf(0.1f) * 4.f;
-        float z = 2.f;
-        
-        float eye[3];
-        eye[0] = x;
-        eye[1] = y;
-        eye[2] = z;
-
-        float at[] = {0.f, 0.f, 0.f};
-        float up[] = {0.f, 0.f, 1.f};
-        kdm_mat4_lookat(eye, at, up, view);
-        GLint view_i = glGetUniformLocation(rt_ctx.pro, "view");
-        glUniformMatrix4fv(view_i, 1, GL_FALSE, view);
-
-        float proj[16];
-        float ratio = (float)(win_desc.width) / (float)win_desc.height;
-        float fov = KDM_TAU * 0.125f;
-        kdm_mat4_perspective_projection(ratio, 0.1f, 100.f, fov, proj);
-        GLint proj_i = glGetUniformLocation(rt_ctx.pro, "proj");
-        glUniformMatrix4fv(proj_i, 1, GL_FALSE, proj);
-        GL_ERR("Update Mats")
 
         /* input */
         GLsizei jmp = 8 * sizeof(GLfloat);
         void *off = 0;
 
-        GLint pos_a = glGetAttribLocation(rt_ctx.pro, "position");
+        GLint pos_a = glGetAttribLocation(ed_ctx.pro, "position");
         if(pos_a > -1) {
                 glEnableVertexAttribArray(pos_a);
                 glVertexAttribPointer(pos_a, 3, GL_FLOAT, GL_FALSE, jmp, off);
@@ -321,7 +306,7 @@ render() {
         }
         off = (void*)(3 * sizeof(GLfloat));
 
-        GLint col_a = glGetAttribLocation(rt_ctx.pro, "color");
+        GLint col_a = glGetAttribLocation(ed_ctx.pro, "color");
         if(col_a > -1) {
                 glEnableVertexAttribArray(col_a);
                 glVertexAttribPointer(col_a, 3, GL_FLOAT, GL_FALSE, jmp, off);
@@ -329,7 +314,7 @@ render() {
         }
         off = (void*)(6 * sizeof(GLfloat));
 
-        GLint tex_a = glGetAttribLocation(rt_ctx.pro, "texcoord");
+        GLint tex_a = glGetAttribLocation(ed_ctx.pro, "texcoord");
         if(tex_a > -1) {
                 glEnableVertexAttribArray(tex_a);
                 glVertexAttribPointer(tex_a, 2, GL_FLOAT, GL_FALSE, jmp, off);
@@ -337,8 +322,46 @@ render() {
         }
         GL_ERR("Vertex Attrs")
 
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        GL_ERR("Draw")
+        int i;
+        for(i = 0; i < 3; ++i) {
+                /* mats */
+                float model[16];
+                kdm_mat4_id(model);
+                model[12] = ed_ctx.transforms[i].x;
+                model[13] = ed_ctx.transforms[i].y;
+                model[14] = ed_ctx.transforms[i].z;
+
+                GLint model_i = glGetUniformLocation(ed_ctx.pro, "model");
+                glUniformMatrix4fv(model_i, 1, GL_FALSE, model);
+        
+                float view[16];
+        
+                float x = sinf(0.1f) * 4.f;
+                float y = cosf(0.1f) * 4.f;
+                float z = 2.f;
+        
+                float eye[3];
+                eye[0] = x;
+                eye[1] = y;
+                eye[2] = z;
+
+                float at[] = {0.f, 0.f, 0.f};
+                float up[] = {0.f, 0.f, 1.f};
+                kdm_mat4_lookat(eye, at, up, view);
+                GLint view_i = glGetUniformLocation(ed_ctx.pro, "view");
+                glUniformMatrix4fv(view_i, 1, GL_FALSE, view);
+
+                float proj[16];
+                float ratio = (float)(win_desc.width) / (float)win_desc.height;
+                float fov = KDM_TAU * 0.125f;
+                kdm_mat4_perspective_projection(ratio, 0.1f, 100.f, fov, proj);
+                GLint proj_i = glGetUniformLocation(ed_ctx.pro, "proj");
+                glUniformMatrix4fv(proj_i, 1, GL_FALSE, proj);
+                GL_ERR("Update Mats")
+
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+                GL_ERR("Draw")
+        }
 
         if(glPopDebugGroup) {
                 glPopDebugGroup();

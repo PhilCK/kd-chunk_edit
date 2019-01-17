@@ -7,6 +7,11 @@
 #include <math.h>
 
 
+#define CHUNK_IMPL
+#include <chunk/chunk.h>
+#include <chunk/types.h>
+
+
 #define GL_ERR(msg)                                           \
 do {                                                          \
         GLuint err = glGetError();                            \
@@ -25,6 +30,9 @@ do {                                                          \
 
 struct rt_ctx {
         GLuint vao, vbo, pro;
+
+        struct ch_transform *transforms;
+        int transform_count;
 } rt_ctx;
 
 
@@ -122,13 +130,6 @@ setup()
                 0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 1.0f, 0.0f,
                 -0.5f,  0.5f,  0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 0.0f,
                 -0.5f,  0.5f, -0.5f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f,
-
-                -1.0f, -1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f,
-                1.0f, -1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,
-                1.0f,  1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-                1.0f,  1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-                -1.0f,  1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f,
-                -1.0f, -1.0f, -0.5f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f
         };
 
         GLuint vbo;
@@ -222,6 +223,12 @@ setup()
         if(glPopDebugGroup) {
                 glPopDebugGroup();
         }
+
+        /* load editor data */
+        struct chunk_header *head = chunk_read_in("foo.dat");
+        uint8_t *data = (uint8_t *)head;
+        rt_ctx.transforms = (ch_transform*)&data[head->data[1].src_offset];
+        rt_ctx.transform_count = head->data[1].src_bytes / sizeof(ch_transform);
 }
 
 
@@ -271,37 +278,6 @@ render() {
         GLint color = glGetUniformLocation(rt_ctx.pro, "overrideColor");
         glUniform3f(color, 1.0f, 1.0f, 1.0f);
 
-        /* mats */
-        float model[16];
-        kdm_mat4_id(model);
-        GLint model_i = glGetUniformLocation(rt_ctx.pro, "model");
-        glUniformMatrix4fv(model_i, 1, GL_FALSE, model);
-
-        float view[16];
-        
-        float x = sinf(0.1f) * 4.f;
-        float y = cosf(0.1f) * 4.f;
-        float z = 2.f;
-        
-        float eye[3];
-        eye[0] = x;
-        eye[1] = y;
-        eye[2] = z;
-
-        float at[] = {0.f, 0.f, 0.f};
-        float up[] = {0.f, 0.f, 1.f};
-        kdm_mat4_lookat(eye, at, up, view);
-        GLint view_i = glGetUniformLocation(rt_ctx.pro, "view");
-        glUniformMatrix4fv(view_i, 1, GL_FALSE, view);
-
-        float proj[16];
-        float ratio = (float)(win_desc.width) / (float)win_desc.height;
-        float fov = KDM_TAU * 0.125f;
-        kdm_mat4_perspective_projection(ratio, 0.1f, 100.f, fov, proj);
-        GLint proj_i = glGetUniformLocation(rt_ctx.pro, "proj");
-        glUniformMatrix4fv(proj_i, 1, GL_FALSE, proj);
-        GL_ERR("Update Mats")
-
         /* input */
         GLsizei jmp = 8 * sizeof(GLfloat);
         void *off = 0;
@@ -330,8 +306,46 @@ render() {
         }
         GL_ERR("Vertex Attrs")
 
-        glDrawArrays(GL_TRIANGLES, 0, 36);
-        GL_ERR("Draw")
+        int i;
+        for(i = 0; i < rt_ctx.transform_count; ++i) {
+                /* mats */
+                float model[16];
+                kdm_mat4_id(model);
+                model[12] = rt_ctx.transforms[i].x;
+                model[13] = rt_ctx.transforms[i].y;
+                model[14] = rt_ctx.transforms[i].z;
+
+                GLint model_i = glGetUniformLocation(rt_ctx.pro, "model");
+                glUniformMatrix4fv(model_i, 1, GL_FALSE, model);
+        
+                float view[16];
+        
+                float x = sinf(0.1f) * 4.f;
+                float y = cosf(0.1f) * 4.f;
+                float z = 2.f;
+        
+                float eye[3];
+                eye[0] = x;
+                eye[1] = y;
+                eye[2] = z;
+
+                float at[] = {0.f, 0.f, 0.f};
+                float up[] = {0.f, 0.f, 1.f};
+                kdm_mat4_lookat(eye, at, up, view);
+                GLint view_i = glGetUniformLocation(rt_ctx.pro, "view");
+                glUniformMatrix4fv(view_i, 1, GL_FALSE, view);
+
+                float proj[16];
+                float ratio = (float)(win_desc.width) / (float)win_desc.height;
+                float fov = KDM_TAU * 0.125f;
+                kdm_mat4_perspective_projection(ratio, 0.1f, 100.f, fov, proj);
+                GLint proj_i = glGetUniformLocation(rt_ctx.pro, "proj");
+                glUniformMatrix4fv(proj_i, 1, GL_FALSE, proj);
+                GL_ERR("Update Mats")
+
+                glDrawArrays(GL_TRIANGLES, 0, 36);
+                GL_ERR("Draw")
+        }
 
         if(glPopDebugGroup) {
                 glPopDebugGroup();
