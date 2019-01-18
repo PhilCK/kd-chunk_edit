@@ -33,6 +33,8 @@ struct rt_ctx {
 
         struct ch_transform *transforms;
         int transform_count;
+
+        chunk_header *head;
 } rt_ctx;
 
 
@@ -238,6 +240,11 @@ shutdown()
         glDeleteProgram(rt_ctx.pro);
         glDeleteBuffers(1, &rt_ctx.vbo);
         glDeleteVertexArrays(1, &rt_ctx.vao);
+
+        if (rt_ctx.head) {
+                chunk_free(rt_ctx.head);
+                rt_ctx.head = nullptr;
+        }
 }
 
 

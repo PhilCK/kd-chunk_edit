@@ -40,6 +40,11 @@ chunk_read_in(
         const char *file);
 
 
+void
+chunk_free(
+        struct chunk_header *header);
+
+
 #endif
 
 
@@ -161,6 +166,14 @@ chunk_read_in(
         fclose(f);
 
         return (struct chunk_header*)buf;
+}
+
+
+void
+chunk_free(
+        struct chunk_header *header)
+{
+        free(header);
 }
 
 
