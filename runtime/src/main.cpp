@@ -228,6 +228,11 @@ setup()
 
         /* load editor data */
         struct chunk_header *head = chunk_read_in("foo.dat");
+
+        if(!head) {
+                return;
+        }
+
         uint8_t *data = (uint8_t *)head;
         rt_ctx.transforms = (ch_transform*)&data[head->data[1].src_offset];
         rt_ctx.transform_count = head->data[1].src_bytes / sizeof(ch_transform);

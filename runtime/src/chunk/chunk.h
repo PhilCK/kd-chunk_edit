@@ -107,7 +107,6 @@ chunk_write_out(
         memset(buf, 0, size_needed);
 
         size_t used = 0;
-        int cpy_bytes = 0;
 
         struct chunk_header *head = (struct chunk_header*)buf;
         head->version = version_tag;

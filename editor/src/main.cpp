@@ -39,7 +39,7 @@ void
 setup()
 {
         kd_result ok = KD_RESULT_OK;
-        ok = kd_log(KD_LOG_INFO, "RT Startup");
+        ok = kd_log(KD_LOG_INFO, "Editor Startup");
         assert(ok == KD_RESULT_OK);
 
         memset(&ed_ctx, 0, sizeof(ed_ctx));
