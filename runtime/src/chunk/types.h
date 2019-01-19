@@ -6,6 +6,7 @@
 #define CHUNK_TRANSFORMS 1
 #define CHUNK_VERSION 0xdead
 
+
 struct ch_transform {
         float x, y, z;
 };

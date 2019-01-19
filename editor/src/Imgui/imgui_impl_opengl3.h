@@ -21,6 +21,9 @@
 
 #pragma once
 
+#define IMGUI_IMPL_API
+struct ImDrawData;
+
 // Set default OpenGL loader to be gl3w
 #if !defined(IMGUI_IMPL_OPENGL_LOADER_GL3W)     \
  && !defined(IMGUI_IMPL_OPENGL_LOADER_GLEW)     \

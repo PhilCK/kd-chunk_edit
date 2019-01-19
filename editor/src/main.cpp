@@ -6,6 +6,10 @@
 #include <stdio.h>
 #include <math.h>
 
+#define IMGUI_IMPL_OPENGL_LOADER_GL3W
+#include "Imgui/imgui_impl_opengl3.h"
+#include "Imgui/imgui_impl_karbon.h"
+#include "Imgui/imgui.h"
 
 #define CHUNK_IMPL
 #include <chunk/chunk.h>
@@ -50,7 +54,7 @@ setup()
         if (gl3wInit()) {
                 assert(!"FAILED TO INIT");
         }
-
+        
         /* print out version */
         char buf[512] = {0};
         sprintf(
@@ -72,9 +76,9 @@ setup()
                         GL_DEBUG_SOURCE_APPLICATION,
                         GL_DEBUG_TYPE_PUSH_GROUP,
                         -1,
-                        "Runtime Setup");
+                        "Editor Setup");
         }
-
+        
         /* vao */
         GLuint vao;
         glGenVertexArrays(1, &vao);
@@ -143,7 +147,7 @@ setup()
 
         /* shd */
         const GLchar *vs_src = ""
-                "#version 130\n"
+                "#version 150\n"
                 "in vec3 position;\n"
                 "in vec3 color;\n"
                 "in vec2 texcoord;\n"
@@ -172,14 +176,14 @@ setup()
         }
 
         const GLchar *fs_src = ""
-                "#version 130\n"
+                "#version 150\n"
                 "in vec2 Texcoord;\n"
                 "in vec3 Color;\n"
                 "uniform sampler2D texKitten;\n"
                 "uniform sampler2D texPuppy;\n"
                 "out vec4 outColor;\n"
                 "void main() {\n"
-                        "outColor = vec4(Color, 1.0) * mix(texture(texKitten, Texcoord), texture(texPuppy, Texcoord), 0.5);\n"
+                        "outColor = vec4(Color, 1.0);\n"
                 "}\n";
 
         GLuint fs_shd = glCreateShader(GL_FRAGMENT_SHADER);
@@ -242,12 +246,17 @@ setup()
         export_tr.bytes = sizeof(ed_ctx.transforms);
 
         chunk_write_out(&export_tr, 1, CHUNK_VERSION, "foo.dat");
+        
+        ImGui::CreateContext();
+        ImGui_ImplOpenGL3_Init("#version 150");
 }
 
 
 void
 shutdown()
 {
+        ImGui_ImplOpenGL3_Shutdown();
+        
         glDeleteProgram(ed_ctx.pro);
         glDeleteBuffers(1, &ed_ctx.vbo);
         glDeleteVertexArrays(1, &ed_ctx.vao);
@@ -262,7 +271,7 @@ render() {
         struct kd_window_desc win_desc;
         win_desc.type_id = KD_STRUCT_WINDOW_DESC;
         kd_window_get(&win_desc);
-
+        
         GL_ERR("New frame");
 
         /* render */
@@ -358,6 +367,10 @@ render() {
                 GLint proj_i = glGetUniformLocation(ed_ctx.pro, "proj");
                 glUniformMatrix4fv(proj_i, 1, GL_FALSE, proj);
                 GL_ERR("Update Mats")
+                
+                GLint ov_color_i = glGetUniformLocation(ed_ctx.pro, "overrideColor");
+                GLfloat color[3] = {1,1,0};
+                glUniform3fv(ov_color_i, 1, color);
 
                 glDrawArrays(GL_TRIANGLES, 0, 36);
                 GL_ERR("Draw")
@@ -391,6 +404,9 @@ think()
                 struct kd_window_desc win_desc;
                 win_desc.type_id = KD_STRUCT_WINDOW_DESC;
                 kd_window_get(&win_desc);
+                
+                ImGui::GetIO().DisplaySize.x = win_desc.width;
+                ImGui::GetIO().DisplaySize.y = win_desc.height;
 
                 glViewport(0, 0, win_desc.width, win_desc.height);
         }
@@ -446,9 +462,19 @@ think()
         if(glPopDebugGroup) {
                 glPopDebugGroup();
         }
-
+        
         /* reset state */
         GL_ERR("End Frame");
+        
+        ImGui_ImplOpenGL3_NewFrame();
+        ImGui_ImplKarbon_NewFrame();
+        ImGui::NewFrame();
+        
+        ImGui::Begin("Editor", NULL);
+        ImGui::End();
+
+        ImGui::Render();
+        ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 }
 
 

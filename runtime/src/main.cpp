@@ -1,5 +1,5 @@
-#include <karbon/drive.h>
 #include <karbon/app.h>
+#include <karbon/drive.h>
 #include <karbon/math.h>
 #include <GL/gl3w.h>
 #include <assert.h>
@@ -146,7 +146,7 @@ setup()
 
         /* shd */
         const GLchar *vs_src = ""
-                "#version 130\n"
+                "#version 150\n"
                 "in vec3 position;\n"
                 "in vec3 color;\n"
                 "in vec2 texcoord;\n"
@@ -175,7 +175,7 @@ setup()
         }
 
         const GLchar *fs_src = ""
-                "#version 130\n"
+                "#version 150\n"
                 "in vec2 Texcoord;\n"
                 "in vec3 Color;\n"
                 "uniform sampler2D texKitten;\n"
