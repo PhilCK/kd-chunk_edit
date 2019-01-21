@@ -242,6 +242,7 @@ setup()
 void
 shutdown()
 {
+        kd_log(KD_LOG_INFO, "Runtime Shutdown");
         glDeleteProgram(rt_ctx.pro);
         glDeleteBuffers(1, &rt_ctx.vbo);
         glDeleteVertexArrays(1, &rt_ctx.vao);

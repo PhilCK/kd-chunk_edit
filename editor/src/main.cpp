@@ -240,13 +240,6 @@ setup()
         ed_ctx.transforms[2].y = -1.f;
         ed_ctx.transforms[2].z = 0.f;
 
-        chunk_export export_tr;
-        export_tr.chunk_idx = 1;
-        export_tr.data = (void*)ed_ctx.transforms;
-        export_tr.bytes = sizeof(ed_ctx.transforms);
-
-        chunk_write_out(&export_tr, 1, CHUNK_VERSION, "foo.dat");
-        
         ImGui::CreateContext();
         ImGui_ImplOpenGL3_Init("#version 150");
 }
@@ -255,14 +248,13 @@ setup()
 void
 shutdown()
 {
+        kd_log(KD_LOG_INFO, "Editor Shutdown");
         ImGui_ImplOpenGL3_Shutdown();
+        ImGui::DestroyContext();
         
         glDeleteProgram(ed_ctx.pro);
         glDeleteBuffers(1, &ed_ctx.vbo);
-        glDeleteVertexArrays(1, &ed_ctx.vao);
-
-        /* chunk test */
-        
+        glDeleteVertexArrays(1, &ed_ctx.vao);        
 }
 
 
@@ -445,6 +437,14 @@ think()
                         ok = kd_ctx_application_index_set(next_idx);
                         assert(ok == KD_RESULT_OK && "Failed to set index");
                 }
+
+                /* save chunk */
+                chunk_export export_tr;
+                export_tr.chunk_idx = 1;
+                export_tr.data = (void*)ed_ctx.transforms;
+                export_tr.bytes = sizeof(ed_ctx.transforms);
+
+                chunk_write_out(&export_tr, 1, CHUNK_VERSION, "foo.dat");
         }
         
         GL_ERR("New frame");
@@ -471,6 +471,12 @@ think()
         ImGui::NewFrame();
         
         ImGui::Begin("Editor", NULL);
+        int i;
+        for (i = 0; i < 3; ++i) {
+                char buf[512] = {0};
+                sprintf(buf, "Pos %d", i);
+                ImGui::DragFloat3(buf, (float*)&ed_ctx.transforms[i]);
+        }
         ImGui::End();
 
         ImGui::Render();

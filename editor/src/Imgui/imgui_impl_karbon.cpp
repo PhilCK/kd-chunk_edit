@@ -31,6 +31,10 @@ ImGui_ImplKarbon_NewFrame()
                 
                 bool mid_down = !!(ms_desc.ms_state[0].keys[KD_MS_MIDDLE] & KD_KEY_DOWN);
                 io.MouseDown[2] = mid_down;
+
+                if(left_down) {
+                        kd_log(KD_LOG_INFO, "Down");
+                }
         }
 }
 
